@@ -89,21 +89,23 @@ app.post("/login/", async (request, response) => {
 
 app.put("/change-password", async (request, response) => {
   const { username, oldPassword, newPassword } = request.body;
-  const lenOfPassword = newPassword.length > 5;
+  const lenOfPassword = newPassword.length;
   const getUserQuery = `select * from user where username='${username}';`;
   const dbUser = await db.get(getUserQuery);
-  const isCurrentPasswordMatch = bcrypt.compare(oldPassword, dbUser.password);
+  const isCurrentPasswordMatch = await bcrypt.compare(
+    oldPassword,
+    dbUser.password
+  );
   if (dbUser !== undefined) {
     if (isCurrentPasswordMatch === true) {
-      if (lenOfPassword === false) {
-        const newHashedPassword = bcrypt.hash(newPassword, 10);
-        const updatePasswordQuery = `update user set password='${newHashedPassword}' where username='${username}';`;
-        await db.run(updatePasswordQuery);
-        response.status(200);
-        response.send("Password updated");
-      } else {
+      if (lenOfPassword < 5) {
         response.status(400);
         response.send("Password is too short");
+      } else {
+        const newHashedPassword = await bcrypt.hash(newPassword, 10);
+        const updatePasswordQuery = `update user set password='${newHashedPassword}' where username='${username}';`;
+        await db.run(updatePasswordQuery);
+        response.send("Password updated");
       }
     } else {
       response.status(400);
